@@ -1031,12 +1031,25 @@ const OCR_PROIBIDAS = new Set(['REPUBLICA','FEDERATIVA','CARTEIRA','IDENTIDADE',
     'NOME','SOCIAL','DOADOR','ORGAOS','IDENTIFICACAO','PAI','MAE','SEXO','ESTRANGEIRO','DEPARTAMENTO',
     'CONDUTOR','NACIONALIDADE','SOBRENOME','HABILITACAO','PERMISSAO','NACIONAL','LOCAL','MUNICIPIO']);
 
+const OCR_RE_FILIACAO = /FILIA|LIACAO|\bW?IACAO\b/;
+
 function ocrNorm(s) {
     return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
 }
 
+// Linhas lidas em colunas trazem lixo colado depois de 3+ espaços: fica só o trecho com mais letras.
+function ocrSegmento(s) {
+    const segs = String(s || '').split(/\s{3,}/);
+    let melhor = segs[0] || '', max = -1;
+    segs.forEach(function(sg) {
+        const letras = (ocrNorm(sg).match(/[A-Z]/g) || []).length;
+        if (letras > max) { max = letras; melhor = sg; }
+    });
+    return melhor;
+}
+
 function ocrLimparNome(s) {
-    let t = ocrNorm(s).replace(/\S*\d\S*/g, ' ').replace(/[^A-Z ]/g, ' ').replace(/\s+/g, ' ').trim();
+    let t = ocrNorm(ocrSegmento(s)).replace(/\S*\d\S*/g, ' ').replace(/[^A-Z ]/g, ' ').replace(/\s+/g, ' ').trim();
     let p = t.split(' ');
     while (p.length && p[0].length === 1) p.shift();
     while (p.length && p[p.length - 1].length === 1) p.pop();
@@ -1046,8 +1059,8 @@ function ocrLimparNome(s) {
 function ocrNomeValido(bruto) {
     if (!bruto) return false;
     const n = ocrLimparNome(bruto);
-    // o que sobrou precisa ser a maior parte da linha (evita aceitar "1548574 SSP MS" como nome)
-    const originalLen = String(bruto).replace(/\s/g, '').length;
+    // o que sobrou precisa ser a maior parte do trecho (evita aceitar "1548574 SSP MS" como nome)
+    const originalLen = ocrSegmento(bruto).replace(/\s/g, '').length;
     if (originalLen === 0 || n.replace(/\s/g, '').length < originalLen * 0.6) return false;
     if (n.length < 5 || n.length > 60) return false;
     const p = n.split(' ');
@@ -1080,9 +1093,9 @@ function ocrDigitos(s) {
 
 function ocrExtrairNome(N, lines, idxFiliacao) {
     for (let i = 0; i < N.length; i++) {
-        const m = N[i].match(/\bNOME\b(?!\s*(SOCIAL|DO PAI|DA MAE|DE PAI|DE MAE))/);
+        const m = N[i].match(/\bNOM[E!1I|]?(?![A-Z])(?!\s*(SOCIAL|DO PAI|DA MAE|DE PAI|DE MAE))/);
         if (!m) continue;
-        let resto = N[i].slice(m.index + 4).replace(/^\s*(E\s+SOBRENOME)?\s*[:\-]?\s*/, '');
+        let resto = N[i].slice(m.index + m[0].length).replace(/^\s*(E\s+SOBRENOME)?\s*[:\-]?\s*/, '');
         if (ocrNomeValido(resto)) return { nome: ocrLimparNome(resto), incerto: false };
         for (let j = i + 1; j <= i + 2 && j < N.length; j++) {
             if (ocrNomeValido(N[j])) return { nome: ocrLimparNome(N[j]), incerto: false };
@@ -1098,7 +1111,7 @@ function ocrExtrairNome(N, lines, idxFiliacao) {
 }
 
 function ocrExtrairFiliacao(N) {
-    const idxF = N.findIndex(l => /FILIA/.test(l));
+    const idxF = N.findIndex(l => OCR_RE_FILIACAO.test(l));
     let mae = '', pai = '';
 
     for (let i = 0; i < N.length; i++) {
@@ -1116,7 +1129,7 @@ function ocrExtrairFiliacao(N) {
 
     let cands = [];
     if (idxF >= 0) {
-        const resto = N[idxF].replace(/^.*?FILIA\w*\s*[:\-]?\s*/, '');
+        const resto = N[idxF].replace(/^.*?(FILIA|LIACAO|IACAO)\w*\s*[:\-]?\s*/, '');
         if (ocrNomeValido(resto)) cands.push(ocrLimparNome(resto));
         for (let j = idxF + 1; j < N.length && j <= idxF + 5 && cands.length < 2; j++) {
             if (ocrNomeValido(N[j])) cands.push(ocrLimparNome(N[j]));
@@ -1135,7 +1148,8 @@ function ocrExtrairFiliacao(N) {
 }
 
 function ocrExtrairCpf(N) {
-    const re = /(?<!\d)([0-9OQILSB]{3})\s?[.,]?\s?([0-9OQILSB]{3})\s?[.,]?\s?([0-9OQILSB]{3})\s?[\-–—.,]?\s?([0-9OQILSB]{2})(?!\d)/g;
+    const D = '[0-9OQILSB]';
+    const re = new RegExp('(?<!\\d)(' + D + '{3})[\\s.,]{0,2}(' + D + '{3})[\\s.,]{0,2}(' + D + '{3})[\\s.,\\-–—]{0,3}(' + D + '{2})(?!\\d)', 'g');
     const achados = [];
     N.forEach((linha, i) => {
         re.lastIndex = 0;
@@ -1143,13 +1157,18 @@ function ocrExtrairCpf(N) {
         while ((m = re.exec(linha)) !== null) {
             const dig = ocrDigitos(m[1] + m[2] + m[3] + m[4]);
             if (!/^\d{11}$/.test(dig)) continue;
-            const perto = /CPF/.test(linha) || (i > 0 && /CPF/.test(N[i - 1]));
-            achados.push({ dig, valido: cpfValido(dig), perto });
+            const ctx = linha + ' ' + (i > 0 ? N[i - 1] : '');
+            const perto = /CPF/.test(ctx);
+            const ruim = !/CPF/.test(linha) && /REGISTRO|CNH|HABILITA/.test(ctx);   // nº de registro da CNH também tem 11 dígitos
+            const valido = cpfValido(dig);
+            const nota = (valido ? 2 : 0) + (perto ? 2 : 0) - (ruim ? 3 : 0);
+            achados.push({ dig, valido, nota, ordem: achados.length });
         }
     });
-    const melhor = achados.find(a => a.valido && a.perto) || achados.find(a => a.valido)
-                || achados.find(a => a.perto);
-    if (!melhor) return { cpf: '', valido: false };
+    if (!achados.length) return { cpf: '', valido: false };
+    achados.sort((x, y) => (y.nota - x.nota) || (x.ordem - y.ordem));
+    const melhor = achados[0];
+    if (!melhor.valido && melhor.nota < 2) return { cpf: '', valido: false };   // inválido e sem rótulo: provavelmente não é CPF
     return { cpf: formatarCpf(melhor.dig), valido: melhor.valido };
 }
 
@@ -1220,7 +1239,7 @@ function ocrRestaurarAcentos(nome, textoOriginal) {
 function analisarTextoDocumento(texto) {
     const lines = String(texto || '').split(/\r?\n/).map(l => l.trim()).filter(Boolean);
     const N = lines.map(ocrNorm);
-    const idxF = N.findIndex(l => /FILIA/.test(l));
+    const idxF = N.findIndex(l => OCR_RE_FILIACAO.test(l));
     const n = ocrExtrairNome(N, lines, idxF);
     const f = ocrExtrairFiliacao(N);
     const c = ocrExtrairCpf(N);
