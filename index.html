@@ -1,0 +1,1549 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerador de Prontuário</title>
+    <!-- Doc Scan SDK -->
+    <script src="https://unpkg.com/doc-scan-sdk@latest/dist/doc-scan-sdk.min.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+        }
+        body {
+            background-color: #f4f6f9;
+            padding: 12px;
+            margin: 0;
+        }
+        .container {
+            max-width: 600px;
+            background: white;
+            padding: 18px;
+            border-radius: 16px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            margin: auto;
+        }
+        h2 {
+            text-align: center;
+            color: #1a202c;
+            margin-top: 0;
+            font-size: 22px;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 10px;
+        }
+        .section-title {
+            background: #e2e8f0;
+            color: #2d3748;
+            padding: 8px 12px;
+            font-weight: bold;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 20px;
+            margin-bottom: 12px;
+            border-left: 5px solid #007bff;
+            border-radius: 4px;
+        }
+        .form-group {
+            margin-bottom: 12px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #4a5568;
+            font-size: 14px;
+        }
+        input[type="text"], textarea, select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #cbd5e0;
+            border-radius: 8px;
+            font-size: 16px;
+            background-color: #fff;
+            color: #2d3748;
+            transition: border-color 0.2s;
+        }
+        input[type="text"]:focus, textarea:focus {
+            border-color: #007bff;
+            outline: none;
+        }
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        .checkbox-group, .expandable-panel {
+            background: #f8fafc;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid #cbd5e0;
+            margin-bottom: 12px;
+        }
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 12px;
+            padding: 4px 0;
+        }
+        .checkbox-item:last-child {
+            margin-bottom: 0;
+        }
+        .checkbox-item input {
+            width: 24px;
+            height: 24px;
+            margin-right: 12px;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+        .checkbox-item label {
+            margin-bottom: 0;
+            cursor: pointer;
+            font-weight: 500;
+        }
+        .refeicao-options {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin-top: 4px;
+        }
+        .refeicao-options input[type="radio"] {
+            display: none;
+        }
+        .refeicao-options label {
+            background: #edf2f7;
+            padding: 10px;
+            text-align: center;
+            border-radius: 8px;
+            cursor: pointer;
+            border: 1px solid #cbd5e0;
+            font-weight: 500;
+            font-size: 14px;
+        }
+        .refeicao-options input[type="radio"]:checked + label {
+            background: #007bff;
+            color: white;
+            border-color: #007bff;
+        }
+        button {
+            width: 100%;
+            padding: 15px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 15px;
+            box-shadow: 0 2px 4px rgba(0,123,255,0.2);
+        }
+        button:active {
+            background-color: #0056b3;
+        }
+        .btn-secondary {
+            background-color: #6c757d;
+            padding: 10px;
+            font-size: 14px;
+            margin-top: 5px;
+            margin-bottom: 10px;
+        }
+        .btn-secondary:active {
+            background-color: #545b62;
+        }
+        .btn-danger {
+            background-color: #dc3545;
+            padding: 6px 10px;
+            font-size: 12px;
+            border-radius: 6px;
+            margin-top: 2px;
+            margin-bottom: 10px;
+            width: auto;
+            display: inline-block;
+        }
+        .btn-danger:active {
+            background-color: #bd2130;
+        }
+        .btn-copy {
+            background-color: #28a745;
+            box-shadow: 0 2px 4px rgba(40,167,69,0.2);
+        }
+        .btn-copy:active {
+            background-color: #1e7e34;
+        }
+
+        /* ===== BOTÃO CÂMERA ===== */
+        .btn-camera-scan {
+            background-color: #2980b9;
+            margin-top: 0;
+            margin-bottom: 10px;
+            padding: 12px 8px;
+            font-size: 14px;
+            box-shadow: 0 2px 4px rgba(41,128,185,0.2);
+        }
+        .btn-camera-scan:active {
+            background-color: #21618c;
+        }
+
+        /* ===== CONTAINER DO SCANNER ===== */
+        .scanner-container {
+            width: 100%;
+            height: 0;
+            overflow: hidden;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            transition: height 0.3s ease;
+            background: #000;
+            position: relative;
+        }
+        .scanner-container.active {
+            height: 400px;
+        }
+        .scanner-status {
+            font-size: 13px;
+            color: #718096;
+            margin-top: 6px;
+            margin-bottom: 8px;
+            text-align: center;
+        }
+
+        /* ===== SANFONA DE VÍTIMA ===== */
+        .vitima-accordion {
+            border: 2px solid #007bff;
+            border-radius: 10px;
+            margin-bottom: 14px;
+            overflow: hidden;
+            background: #fff;
+        }
+        .vitima-header {
+            background: linear-gradient(135deg, #007bff, #0056b3);
+            color: white;
+            padding: 14px 16px;
+            font-weight: bold;
+            font-size: 15px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            user-select: none;
+        }
+        .vitima-header:active {
+            background: linear-gradient(135deg, #0056b3, #003d82);
+        }
+        .vitima-header .lado-esquerdo {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .vitima-header .lado-direito {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .vitima-header .arrow {
+            font-size: 14px;
+            transition: transform 0.25s ease;
+            display: inline-block;
+        }
+        .vitima-header.open .arrow {
+            transform: rotate(180deg);
+        }
+        .btn-lixeira {
+            background: rgba(255,255,255,0.15);
+            border: 1px solid rgba(255,255,255,0.35);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+            width: auto;
+            margin: 0;
+            box-shadow: none;
+            line-height: 1;
+            transition: background 0.2s;
+        }
+        .btn-lixeira:hover {
+            background: rgba(220,53,69,0.85);
+            border-color: rgba(220,53,69,1);
+        }
+        .btn-lixeira:active {
+            background-color: #bd2130;
+        }
+        .vitima-body {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.4s ease;
+            background: #fff;
+        }
+        .vitima-body.open {
+            max-height: 6000px;
+        }
+        .vitima-content {
+            padding: 14px;
+        }
+
+        .btn-add-vitima {
+            background-color: #28a745;
+            box-shadow: 0 2px 4px rgba(40,167,69,0.2);
+            margin-top: 8px;
+            margin-bottom: 18px;
+        }
+        .btn-add-vitima:active {
+            background-color: #1e7e34;
+        }
+        .btn-limpar-vitima {
+            background-color: #6c757d;
+            padding: 10px;
+            font-size: 13px;
+            margin-top: 14px;
+            margin-bottom: 0;
+        }
+        .btn-limpar-vitima:active {
+            background-color: #545b62;
+        }
+
+        /* ===== NOVA ÁREA DO RELATÓRIO ===== */
+        .output-wrapper {
+            margin-top: 15px;
+            background-color: #ffffff;
+            border: 2px solid #cbd5e0;
+            border-radius: 8px;
+            padding: 16px;
+            min-height: 60px;
+            word-wrap: break-word;
+            white-space: pre-wrap;
+            color: #1a202c;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 15px;
+            line-height: 1.6;
+            -webkit-user-select: text;
+            user-select: text;
+            transition: font-size 0.2s ease;
+        }
+        .output-placeholder {
+            color: #a0aec0;
+            font-style: italic;
+            font-family: Arial, sans-serif;
+        }
+
+        /* ===== BARRA DE CONTROLE DO RELATÓRIO ===== */
+        .output-toolbar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+        .output-toolbar .font-controls {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            margin-left: auto;
+        }
+        .btn-font {
+            width: 40px;
+            height: 40px;
+            padding: 0;
+            margin: 0;
+            font-size: 18px;
+            font-weight: bold;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #e2e8f0;
+            color: #2d3748;
+            box-shadow: none;
+            border: 1px solid #cbd5e0;
+            flex-shrink: 0;
+        }
+        .btn-font:active {
+            background-color: #cbd5e0;
+        }
+        .font-size-label {
+            font-size: 12px;
+            color: #718096;
+            font-weight: 600;
+            min-width: 36px;
+            text-align: center;
+        }
+
+        .toast {
+            display: none;
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(26, 32, 44, 0.9);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 30px;
+            font-size: 14px;
+            font-weight: bold;
+            z-index: 999;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        }
+        .hidden {
+            display: none !important;
+        }
+        .veiculo-bloco, .apoio-bloco {
+            border-bottom: 1px dashed #cbd5e0;
+            padding-bottom: 10px;
+            margin-bottom: 10px;
+        }
+        .veiculo-bloco:last-child, .apoio-bloco:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+        .numero-bloco {
+            font-size: 12px;
+            font-weight: bold;
+            color: #718096;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* ===== SANFONA ECG ===== */
+        .accordion {
+            margin-top: 20px;
+            margin-bottom: 12px;
+            border: 1px solid #cbd5e0;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .accordion-header {
+            background: #e2e8f0;
+            color: #2d3748;
+            padding: 12px 14px;
+            font-weight: bold;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-left: 5px solid #007bff;
+            user-select: none;
+        }
+        .accordion-header:active {
+            background: #cbd5e0;
+        }
+        .accordion-header .arrow {
+            font-size: 14px;
+            transition: transform 0.25s ease;
+            display: inline-block;
+        }
+        .accordion-header.open .arrow {
+            transform: rotate(180deg);
+        }
+        .accordion-body {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.35s ease;
+            background: #f8fafc;
+        }
+        .accordion-body.open {
+            max-height: 2500px;
+        }
+        .accordion-content {
+            padding: 12px;
+        }
+        .ecg-group {
+            background: white;
+            border: 1px solid #cbd5e0;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 10px;
+        }
+        .ecg-group:last-of-type {
+            margin-bottom: 0;
+        }
+        .ecg-group-title {
+            font-weight: bold;
+            color: #2d3748;
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 6px;
+        }
+        .ecg-options {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+            gap: 6px;
+        }
+        .ecg-options input[type="radio"] {
+            display: none;
+        }
+        .ecg-options label {
+            background: #edf2f7;
+            padding: 8px 6px;
+            text-align: center;
+            border-radius: 6px;
+            cursor: pointer;
+            border: 1px solid #cbd5e0;
+            font-weight: 500;
+            font-size: 12px;
+            margin-bottom: 0;
+            line-height: 1.2;
+        }
+        .ecg-options input[type="radio"]:checked + label {
+            background: #007bff;
+            color: white;
+            border-color: #007bff;
+        }
+        .ecg-total {
+            background: #007bff;
+            color: white;
+            padding: 12px;
+            border-radius: 8px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 16px;
+            margin-top: 12px;
+            letter-spacing: 0.5px;
+        }
+        .ecg-total span {
+            font-size: 22px;
+        }
+        .ecg-total .detalhe {
+            font-size: 12px;
+            font-weight: normal;
+            opacity: 0.9;
+            display: block;
+            margin-top: 2px;
+        }
+        .btn-reset-ecg {
+            background-color: #6c757d;
+            padding: 8px;
+            font-size: 13px;
+            margin-top: 10px;
+        }
+        .btn-reset-ecg:active {
+            background-color: #545b62;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>🚑 Registro de Atendimento</h2>
+
+    <!-- ============ DADOS DA OCORRÊNCIA ============ -->
+    <div class="section-title">Chamado</div>
+    <div class="form-group">
+        <label>Bravo:</label>
+        <input type="text" id="bravo" placeholder="Ex: B01">
+    </div>
+    <div class="form-group">
+        <label>Endereço:</label>
+        <input type="text" id="endereco">
+    </div>
+
+    <div class="section-title">Cenário / Apoio</div>
+    <div class="checkbox-group">
+        <div class="checkbox-item">
+            <input type="checkbox" id="check_pm" onchange="togglePainel('painel_pm', this)">
+            <label for="check_pm">🚨 Viatura(s) de Apoio</label>
+        </div>
+        <div id="painel_pm" class="expandable-panel hidden">
+            <div id="container_apoio">
+                <div class="apoio-bloco" id="bloco_apoio_1">
+                    <div class="numero-bloco">Apoio 1</div>
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label>Comandante:</label>
+                            <input type="text" class="txt-apoio-cmd" placeholder="Ex: Sgt Silva">
+                        </div>
+                        <div class="form-group">
+                            <label>Viatura:</label>
+                            <input type="text" class="txt-apoio-viatura" placeholder="Ex: M-12345">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <button type="button" class="btn-secondary" onclick="addApoio()">➕ Mais 1 Apoio</button>
+        </div>
+
+        <div class="checkbox-item">
+            <input type="checkbox" id="check_acidente" onchange="togglePainel('painel_acidente', this)">
+            <label for="check_acidente">💥 Acidente de Trânsito</label>
+        </div>
+        <div id="painel_acidente" class="expandable-panel hidden">
+            <div id="container_veiculos">
+                <div class="veiculo-bloco" id="bloco_veiculo_1">
+                    <div class="numero-bloco">Veículo 1</div>
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label>Veículo:</label>
+                            <input type="text" class="txt-veiculo" placeholder="Ex: Fiat Uno Preto">
+                        </div>
+                        <div class="form-group">
+                            <label>Placa:</label>
+                            <input type="text" class="txt-placa" placeholder="Ex: ABC-1234">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <button type="button" class="btn-secondary" onclick="addVeiculo()">➕ Mais 1 Veículo</button>
+        </div>
+    </div>
+
+    <!-- ============ VÍTIMAS ============ -->
+    <div class="section-title" style="margin-top: 24px;">Vítimas</div>
+
+    <div id="container_vitimas"></div>
+
+    <button type="button" class="btn-add-vitima" onclick="adicionarVitima()">
+        ➕ Adicionar outra vítima
+    </button>
+
+    <!-- ============ GERAR RELATÓRIO ============ -->
+    <button onclick="gerarTexto()">Gerar Relatório</button>
+
+    <div class="section-title" id="resultado_secao">Resultado</div>
+
+    <div class="output-toolbar">
+        <button class="btn-copy" onclick="copiarTexto()" style="flex:1; min-width:0;">Copiar Texto</button>
+        <div class="font-controls">
+            <button class="btn-font" onclick="ajustarFonte(-1)" title="Diminuir fonte">A−</button>
+            <span class="font-size-label" id="font_size_label">15px</span>
+            <button class="btn-font" onclick="ajustarFonte(1)" title="Aumentar fonte">A+</button>
+        </div>
+    </div>
+
+    <div class="output-wrapper" id="output">
+        <span class="output-placeholder">Clique em "Gerar Relatório" para exibir o texto aqui...</span>
+    </div>
+</div>
+
+<div class="toast" id="toast">Copiado com sucesso! ✔️</div>
+
+<script>
+// ==========================================
+// PROTEÇÃO CONTRA ATUALIZAÇÃO DA PÁGINA
+// ==========================================
+window.addEventListener('beforeunload', function(e) {
+    e.preventDefault();
+    e.returnValue = 'ATENÇÃO: Todos os dados preenchidos serão apagados se você atualizar a página! Tem certeza que deseja sair?';
+    return e.returnValue;
+});
+
+// ==========================================
+// ESTADO GLOBAL
+// ==========================================
+let contadorVitimas = 0;
+let valorDrGlobal = '';
+
+// Guarda as instâncias do DocScanner por vítima
+const SCANNERS_POR_VITIMA = {};
+
+// ==========================================
+// CRIAÇÃO DE VÍTIMA
+// ==========================================
+function adicionarVitima() {
+    contadorVitimas++;
+    const n = contadorVitimas;
+    const id = 'vit' + n;
+
+    const container = document.getElementById('container_vitimas');
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'vitima-accordion';
+    wrapper.id = 'acc_' + id;
+
+    wrapper.innerHTML = `
+        <div class="vitima-header" id="header_${id}" onclick="toggleVitima('${id}')">
+            <div class="lado-esquerdo">
+                <span class="titulo-vitima">👤 Vítima ${n}</span>
+            </div>
+            <div class="lado-direito">
+                <button type="button" class="btn-lixeira hidden" id="btn_lixeira_${id}"
+                        onclick="event.stopPropagation(); removerVitima('${id}')"
+                        title="Remover vítima">🗑️</button>
+                <span class="arrow">▼</span>
+            </div>
+        </div>
+        <div class="vitima-body" id="body_${id}">
+            <div class="vitima-content">
+
+                <div class="section-title">Identificação</div>
+
+                <button type="button" class="btn-camera-scan" onclick="abrirScannerCamera('${id}')">
+                    📸 Capturar pela câmera (auto-capture)
+                </button>
+                <div class="scanner-container" id="scanner_${id}"></div>
+                <div class="scanner-status" id="scanner_status_${id}"></div>
+
+                <div class="form-group">
+                    <label>Paciente:</label>
+                    <input type="text" id="paciente_${id}">
+                </div>
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label>DN:</label>
+                        <input type="text" id="dn_${id}" placeholder="dd/mm/aaaa" maxlength="10" inputmode="numeric" oninput="mascaraData('${id}')">
+                    </div>
+                    <div class="form-group">
+                        <label>Idade:</label>
+                        <input type="text" id="idade_${id}">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>CPF:</label>
+                    <input type="text" id="cpf_${id}" placeholder="000.000.000-00">
+                </div>
+                <div class="form-group">
+                    <label>Mãe:</label>
+                    <input type="text" id="mae_${id}">
+                </div>
+
+                <div class="section-title">Caso</div>
+                <div class="form-group">
+                    <label>Situação:</label>
+                    <textarea id="situacao_${id}" rows="2"></textarea>
+                </div>
+
+                <div class="section-title">Procedimento Realizado</div>
+                <div class="checkbox-group">
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="proc_nenhum_${id}" onchange="checkNenhum('${id}')">
+                        <label for="proc_nenhum_${id}">Sem intervenção</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="proc_padrao_${id}" checked onchange="checkPadrao('${id}')">
+                        <label for="proc_padrao_${id}">Padrão (Abordagem, Exames, Sinais e Transporte)</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="proc_imob_${id}" onchange="checkPadrao('${id}')">
+                        <label for="proc_imob_${id}">Imobilização / Contenção</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="proc_oxig_${id}" onchange="checkPadrao('${id}')">
+                        <label for="proc_oxig_${id}">Oxigênio Terapia</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="proc_inter_${id}" onchange="checkPadrao('${id}')">
+                        <label for="proc_inter_${id}">Transporte Interhospitalar</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="proc_outro_${id}" onchange="toggleOutrosProc('${id}')">
+                        <label for="proc_outro_${id}">Outros...</label>
+                    </div>
+                </div>
+                <div class="form-group hidden" id="div_outro_procedimento_${id}">
+                    <label>Especifique o procedimento extra:</label>
+                    <input type="text" id="outro_procedimento_texto_${id}" placeholder="Digite os procedimentos adicionais">
+                </div>
+
+                <!-- ECG -->
+                <div class="accordion">
+                    <div class="accordion-header" id="ecg_header_${id}" onclick="toggleECG('${id}')">
+                        <span>🧠 ECG — Escala de Coma de Glasgow</span>
+                        <span class="arrow">▼</span>
+                    </div>
+                    <div class="accordion-body" id="ecg_body_${id}">
+                        <div class="accordion-content">
+
+                            <div class="ecg-group">
+                                <div class="ecg-group-title">Abertura Ocular (O)</div>
+                                <div class="ecg-options">
+                                    <input type="radio" id="ecg_oc_4_${id}" name="ecg_ocular_${id}" value="4" onchange="calcularGlasgow('${id}')">
+                                    <label for="ecg_oc_4_${id}">4 — Espontânea</label>
+                                    <input type="radio" id="ecg_oc_3_${id}" name="ecg_ocular_${id}" value="3" onchange="calcularGlasgow('${id}')">
+                                    <label for="ecg_oc_3_${id}">3 — À voz</label>
+                                    <input type="radio" id="ecg_oc_2_${id}" name="ecg_ocular_${id}" value="2" onchange="calcularGlasgow('${id}')">
+                                    <label for="ecg_oc_2_${id}">2 — À dor</label>
+                                    <input type="radio" id="ecg_oc_1_${id}" name="ecg_ocular_${id}" value="1" onchange="calcularGlasgow('${id}')">
+                                    <label for="ecg_oc_1_${id}">1 — Ausente</label>
+                                </div>
+                            </div>
+
+                            <div class="ecg-group">
+                                <div class="ecg-group-title">Resposta Verbal (V)</div>
+                                <div class="ecg-options">
+                                    <input type="radio" id="ecg_vb_5_${id}" name="ecg_verbal_${id}" value="5" onchange="calcularGlasgow('${id}')">
+                                    <label for="ecg_vb_5_${id}">5 — Orientada</label>
+                                    <input type="radio" id="ecg_vb_4_${id}" name="ecg_verbal_${id}" value="4" onchange="calcularGlasgow('${id}')">
+                                    <label for="ecg_vb_4_${id}">4 — Confusa</label>
+                                    <input type="radio" id="ecg_vb_3_${id}" name="ecg_verbal_${id}" value="3" onchange="calcularGlasgow('${id}')">
+                                    <label for="ecg_vb_3_${id}">3 — Palavras</label>
+                                    <input type="radio" id="ecg_vb_2_${id}" name="ecg_verbal_${id}" value="2" onchange="calcularGlasgow('${id}')">
+                                    <label for="ecg_vb_2_${id}">2 — Sons</label>
+                                    <input type="radio" id="ecg_vb_1_${id}" name="ecg_verbal_${id}" value="1" onchange="calcularGlasgow('${id}')">
+                                    <label for="ecg_vb_1_${id}">1 — Ausente</label>
+                                </div>
+                            </div>
+
+                            <div class="ecg-group">
+                                <div class="ecg-group-title">Resposta Motora (M)</div>
+                                <div class="ecg-options">
+                                    <input type="radio" id="ecg_mt_6_${id}" name="ecg_motora_${id}" value="6" onchange="calcularGlasgow('${id}')">
+                                    <label for="ecg_mt_6_${id}">6 — Obedece</label>
+                                    <input type="radio" id="ecg_mt_5_${id}" name="ecg_motora_${id}" value="5" onchange="calcularGlasgow('${id}')">
+                                    <label for="ecg_mt_5_${id}">5 — Localiza</label>
+                                    <input type="radio" id="ecg_mt_4_${id}" name="ecg_motora_${id}" value="4" onchange="calcularGlasgow('${id}')">
+                                    <label for="ecg_mt_4_${id}">4 — Retirada</label>
+                                    <input type="radio" id="ecg_mt_3_${id}" name="ecg_motora_${id}" value="3" onchange="calcularGlasgow('${id}')">
+                                    <label for="ecg_mt_3_${id}">3 — Flexão</label>
+                                    <input type="radio" id="ecg_mt_2_${id}" name="ecg_motora_${id}" value="2" onchange="calcularGlasgow('${id}')">
+                                    <label for="ecg_mt_2_${id}">2 — Extensão</label>
+                                    <input type="radio" id="ecg_mt_1_${id}" name="ecg_motora_${id}" value="1" onchange="calcularGlasgow('${id}')">
+                                    <label for="ecg_mt_1_${id}">1 — Ausente</label>
+                                </div>
+                            </div>
+
+                            <div class="ecg-group">
+                                <div class="ecg-group-title">Reatividade Pupilar (P) — subtrai do total</div>
+                                <div class="ecg-options">
+                                    <input type="radio" id="ecg_pu_0_${id}" name="ecg_pupilar_${id}" value="0" onchange="calcularGlasgow('${id}')">
+                                    <label for="ecg_pu_0_${id}">0 — Ambas reagentes</label>
+                                    <input type="radio" id="ecg_pu_1_${id}" name="ecg_pupilar_${id}" value="1" onchange="calcularGlasgow('${id}')">
+                                    <label for="ecg_pu_1_${id}">−1 — Apenas uma</label>
+                                    <input type="radio" id="ecg_pu_2_${id}" name="ecg_pupilar_${id}" value="2" onchange="calcularGlasgow('${id}')">
+                                    <label for="ecg_pu_2_${id}">−2 — Nenhuma</label>
+                                </div>
+                            </div>
+
+                            <div class="ecg-total" id="ecg_total_${id}">
+                                Glasgow: <span id="ecg_total_valor_${id}">—</span>
+                                <span class="detalhe" id="ecg_detalhe_${id}"></span>
+                            </div>
+                            <button type="button" class="btn-reset-ecg" onclick="resetECG('${id}')">🔄 Limpar ECG</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section-title">Sinais Vitais & Avaliação</div>
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label>PA:</label>
+                        <input type="text" id="pa_${id}" placeholder="120/80">
+                    </div>
+                    <div class="form-group">
+                        <label>SAT (%):</label>
+                        <input type="text" id="sat_${id}" placeholder="00">
+                    </div>
+                </div>
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label>FC (bpm):</label>
+                        <input type="text" id="fc_${id}" placeholder="00">
+                    </div>
+                    <div class="form-group">
+                        <label>FR (mrpm):</label>
+                        <input type="text" id="fr_${id}" placeholder="00">
+                    </div>
+                </div>
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label>Pupilas:</label>
+                        <input type="text" id="pupilas_${id}">
+                    </div>
+                    <div class="form-group">
+                        <label>Glasgow:</label>
+                        <input type="text" id="glasgow_${id}">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Pele:</label>
+                    <input type="text" id="pele_${id}" placeholder="Ex: corada, desidratada, fria, cianótica">
+                </div>
+                <div class="form-group">
+                    <label>Última Refeição:</label>
+                    <div class="refeicao-options">
+                        <input type="radio" id="ref_cafe_${id}" name="refeicao_${id}" value="café">
+                        <label for="ref_cafe_${id}">Café</label>
+                        <input type="radio" id="ref_almoco_${id}" name="refeicao_${id}" value="almoço">
+                        <label for="ref_almoco_${id}">Almoço</label>
+                        <input type="radio" id="ref_janta_${id}" name="refeicao_${id}" value="janta">
+                        <label for="ref_janta_${id}">Janta</label>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Alergia:</label>
+                    <input type="text" id="alergia_${id}" placeholder="Ex: Nega ou informe as alergias">
+                </div>
+                <div class="form-group">
+                    <label>Medicamentos:</label>
+                    <input type="text" id="medicamentos_${id}" placeholder="Medicamentos de uso contínuo">
+                </div>
+
+                <div class="section-title">Regulação</div>
+                <div class="form-group">
+                    <label>Regulado para:</label>
+                    <input type="text" id="regulado_${id}">
+                </div>
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label>Dr:</label>
+                        <input type="text" id="dr_${id}" oninput="sincronizarDr('${id}', this.value)">
+                    </div>
+                    <div class="form-group">
+                        <label>Senha:</label>
+                        <input type="text" id="senha_${id}">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Vítima admitida aos cuidados do(a):</label>
+                    <input type="text" id="cuidados_${id}">
+                </div>
+
+                <button type="button" class="btn-limpar-vitima" onclick="limparVitima('${id}')">🧹 Limpar os campos</button>
+            </div>
+        </div>
+    `;
+
+    container.appendChild(wrapper);
+
+    if (valorDrGlobal !== '') {
+        document.getElementById('dr_' + id).value = valorDrGlobal;
+    }
+
+    renumerarVitimas();
+}
+
+// ==========================================
+// SCANNER DOC-SCAN-SDK (auto-capture)
+// ==========================================
+function abrirScannerCamera(id) {
+    const containerEl = document.getElementById('scanner_' + id);
+    const statusEl = document.getElementById('scanner_status_' + id);
+
+    // Se já existe um scanner ativo para esta vítima, destrói e recria
+    if (SCANNERS_POR_VITIMA[id]) {
+        try { SCANNERS_POR_VITIMA[id].destroy(); } catch(e) {}
+        SCANNERS_POR_VITIMA[id] = null;
+    }
+
+    // Verifica se a biblioteca carregou
+    if (typeof DocScanner === 'undefined') {
+        statusEl.textContent = '❌ Biblioteca DocScanner não carregou. Verifique sua conexão.';
+        return;
+    }
+
+    // Abre o container
+    containerEl.classList.add('active');
+    containerEl.innerHTML = '';
+    statusEl.textContent = '📷 Iniciando câmera... Aguarde.';
+
+    try {
+        const scanner = new DocScanner('#scanner_' + id, {
+            documentType: 'rg',      // RG brasileiro
+            language: 'por',
+            autoCapture: true,       // Captura automática
+            minQuality: 0.6,         // Qualidade mínima para capturar
+            captureDelay: 500,       // Delay após atingir qualidade
+            maxRetries: 3
+        });
+
+        SCANNERS_POR_VITIMA[id] = scanner;
+
+        scanner.on('capture', function(result) {
+            // Preenche os campos da vítima com os dados extraídos
+            const data = result.data || {};
+
+            if (data.nome) {
+                document.getElementById('paciente_' + id).value = data.nome;
+            }
+
+            if (data.dataNascimento) {
+                const dnInput = document.getElementById('dn_' + id);
+                dnInput.value = data.dataNascimento;
+                mascaraData(id); // Aplica máscara e calcula idade
+            }
+
+            if (data.cpf) {
+                document.getElementById('cpf_' + id).value = data.cpf;
+            }
+
+            if (data.filiacao) {
+                // A filiação pode conter mãe e pai. Tenta extrair apenas a mãe.
+                // Se vier como "Maria da Silva" (só a mãe), usa direto.
+                // Se vier com múltiplas linhas, pega a primeira linha não vazia.
+                let filiacaoTexto = '';
+                if (typeof data.filiacao === 'string') {
+                    // Separa por quebras de linha ou " / "
+                    const partes = data.filiacao.split(/[\n\/]+/).map(p => p.trim()).filter(p => p);
+                    // Pega a primeira parte que não contenha "pai" (case-insensitive)
+                    const maeParte = partes.find(p => !/pai/i.test(p));
+                    filiacaoTexto = maeParte || partes[0] || '';
+                }
+                if (filiacaoTexto) {
+                    document.getElementById('mae_' + id).value = filiacaoTexto;
+                }
+            }
+
+            statusEl.textContent = '✅ Documento capturado e campos preenchidos!';
+            containerEl.classList.remove('active');
+        });
+
+        scanner.on('error', function(err) {
+            console.error('DocScanner erro:', err);
+            statusEl.textContent = '❌ Erro: ' + (err.message || 'Falha na captura');
+        });
+
+        scanner.start();
+
+    } catch (err) {
+        console.error(err);
+        statusEl.textContent = '❌ Erro ao inicializar scanner: ' + (err.message || 'Desconhecido');
+        containerEl.classList.remove('active');
+    }
+}
+
+// ==========================================
+// REMOÇÃO / RENUMERAÇÃO
+// ==========================================
+function removerVitima(id) {
+    const total = document.querySelectorAll('.vitima-accordion').length;
+    if (total <= 1) {
+        alert('É necessário manter ao menos uma vítima no registro.');
+        return;
+    }
+    if (!confirm('Tem certeza que deseja remover esta vítima? Todos os dados dela serão apagados.')) return;
+
+    if (SCANNERS_POR_VITIMA[id]) {
+        try { SCANNERS_POR_VITIMA[id].destroy(); } catch(e) {}
+        delete SCANNERS_POR_VITIMA[id];
+    }
+
+    const acc = document.getElementById('acc_' + id);
+    if (acc) acc.remove();
+
+    renumerarVitimas();
+}
+
+function renumerarVitimas() {
+    const todas = document.querySelectorAll('.vitima-accordion');
+    todas.forEach(function(acc, index) {
+        const num = index + 1;
+        const titulo = acc.querySelector('.titulo-vitima');
+        if (titulo) titulo.textContent = '👤 Vítima ' + num;
+
+        const id = acc.id.replace('acc_', '');
+        const btn = document.getElementById('btn_lixeira_' + id);
+        if (btn) {
+            if (index === 0) {
+                btn.classList.add('hidden');
+            } else {
+                btn.classList.remove('hidden');
+            }
+        }
+    });
+}
+
+function toggleVitima(id) {
+    const header = document.getElementById('header_' + id);
+    const body = document.getElementById('body_' + id);
+    header.classList.toggle('open');
+    body.classList.toggle('open');
+}
+
+// ==========================================
+// LIMPAR CAMPOS
+// ==========================================
+function limparVitima(id) {
+    if (!confirm('Tem certeza que deseja limpar todos os campos desta vítima?')) return;
+
+    const campos = [
+        'paciente_', 'dn_', 'idade_', 'cpf_', 'mae_',
+        'situacao_', 'outro_procedimento_texto_',
+        'pa_', 'sat_', 'fc_', 'fr_', 'pupilas_', 'glasgow_',
+        'pele_', 'alergia_', 'medicamentos_',
+        'regulado_', 'dr_', 'senha_', 'cuidados_'
+    ];
+    campos.forEach(function(prefixo) {
+        const el = document.getElementById(prefixo + id);
+        if (el) {
+            el.value = '';
+            el.readOnly = false;
+            el.style.backgroundColor = '#fff';
+        }
+    });
+
+    document.querySelectorAll(
+        'input[name="refeicao_' + id + '"], input[name="ecg_ocular_' + id + '"], ' +
+        'input[name="ecg_verbal_' + id + '"], input[name="ecg_motora_' + id + '"], ' +
+        'input[name="ecg_pupilar_' + id + '"]'
+    ).forEach(function(r) { r.checked = false; });
+
+    const procs = ['proc_nenhum_', 'proc_padrao_', 'proc_imob_', 'proc_oxig_', 'proc_inter_', 'proc_outro_'];
+    procs.forEach(function(prefixo) {
+        const el = document.getElementById(prefixo + id);
+        if (el) el.checked = false;
+    });
+
+    const padrao = document.getElementById('proc_padrao_' + id);
+    if (padrao) padrao.checked = true;
+
+    const divOutro = document.getElementById('div_outro_procedimento_' + id);
+    if (divOutro) divOutro.classList.add('hidden');
+
+    const totalEl = document.getElementById('ecg_total_valor_' + id);
+    if (totalEl) totalEl.textContent = '—';
+    const detalheEl = document.getElementById('ecg_detalhe_' + id);
+    if (detalheEl) detalheEl.textContent = '';
+
+    const statusEl = document.getElementById('scanner_status_' + id);
+    if (statusEl) statusEl.textContent = '';
+
+    // Para o scanner se estiver ativo
+    if (SCANNERS_POR_VITIMA[id]) {
+        try { SCANNERS_POR_VITIMA[id].destroy(); } catch(e) {}
+        SCANNERS_POR_VITIMA[id] = null;
+    }
+    const containerEl = document.getElementById('scanner_' + id);
+    if (containerEl) containerEl.classList.remove('active');
+}
+
+// ==========================================
+// SINCRONIZAÇÃO DO Dr
+// ==========================================
+function sincronizarDr(idOrigem, valor) {
+    valorDrGlobal = valor;
+    document.querySelectorAll('.vitima-accordion').forEach(function(acc) {
+        const outroId = acc.id.replace('acc_', '');
+        if (outroId === idOrigem) return;
+        const input = document.getElementById('dr_' + outroId);
+        if (input && input.value !== valor) {
+            input.value = valor;
+        }
+    });
+}
+
+// ==========================================
+// TOGGLE PAINÉIS / ECG
+// ==========================================
+function togglePainel(idPainel, checkbox) {
+    let painel = document.getElementById(idPainel);
+    if (checkbox.checked) {
+        painel.classList.remove('hidden');
+    } else {
+        painel.classList.add('hidden');
+    }
+}
+
+function toggleECG(id) {
+    let header = document.getElementById('ecg_header_' + id);
+    let body = document.getElementById('ecg_body_' + id);
+    header.classList.toggle('open');
+    body.classList.toggle('open');
+}
+
+// ==========================================
+// MÁSCARA DE DATA + IDADE
+// ==========================================
+function mascaraData(id) {
+    let input = document.getElementById('dn_' + id);
+    let valor = input.value.replace(/\D/g, '');
+    if (valor.length > 8) valor = valor.slice(0, 8);
+
+    let formatado = '';
+    if (valor.length > 0) formatado = valor.slice(0, 2);
+    if (valor.length >= 3) formatado += '/' + valor.slice(2, 4);
+    if (valor.length >= 5) formatado += '/' + valor.slice(4, 8);
+
+    input.value = formatado;
+    calcularIdade(id);
+}
+
+function calcularIdade(id) {
+    let dnInput = document.getElementById('dn_' + id);
+    let idadeInput = document.getElementById('idade_' + id);
+    let valorDN = dnInput.value.trim();
+
+    if (valorDN === '') {
+        idadeInput.readOnly = false;
+        idadeInput.style.backgroundColor = '#fff';
+        return;
+    }
+
+    let match = valorDN.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    if (!match) {
+        idadeInput.readOnly = false;
+        idadeInput.style.backgroundColor = '#fff';
+        return;
+    }
+
+    let dia = parseInt(match[1], 10);
+    let mes = parseInt(match[2], 10);
+    let ano = parseInt(match[3], 10);
+
+    let dataNasc = new Date(ano, mes - 1, dia);
+    if (dataNasc.getDate() !== dia || dataNasc.getMonth() !== (mes - 1) || dataNasc.getFullYear() !== ano) {
+        idadeInput.readOnly = false;
+        idadeInput.style.backgroundColor = '#fff';
+        return;
+    }
+
+    let hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+    if (dataNasc > hoje) {
+        idadeInput.readOnly = false;
+        idadeInput.style.backgroundColor = '#fff';
+        return;
+    }
+
+    let idade = hoje.getFullYear() - dataNasc.getFullYear();
+    let m = hoje.getMonth() - dataNasc.getMonth();
+    if (m < 0 || (m === 0 && hoje.getDate() < dataNasc.getDate())) {
+        idade--;
+    }
+
+    idadeInput.value = idade;
+    idadeInput.readOnly = true;
+    idadeInput.style.backgroundColor = '#f0f4f8';
+}
+
+// ==========================================
+// GLASGOW
+// ==========================================
+function calcularGlasgow(id) {
+    let ocular = document.querySelector('input[name="ecg_ocular_' + id + '"]:checked');
+    let verbal = document.querySelector('input[name="ecg_verbal_' + id + '"]:checked');
+    let motora = document.querySelector('input[name="ecg_motora_' + id + '"]:checked');
+    let pupilar = document.querySelector('input[name="ecg_pupilar_' + id + '"]:checked');
+
+    let glasgowInput = document.getElementById('glasgow_' + id);
+    let totalEl = document.getElementById('ecg_total_valor_' + id);
+    let detalheEl = document.getElementById('ecg_detalhe_' + id);
+
+    if (ocular && verbal && motora && pupilar) {
+        let o = parseInt(ocular.value, 10);
+        let v = parseInt(verbal.value, 10);
+        let m = parseInt(motora.value, 10);
+        let p = parseInt(pupilar.value, 10);
+
+        let bruto = o + v + m;
+        let total = bruto - p;
+        if (total < 1) total = 1;
+
+        glasgowInput.value = total;
+        glasgowInput.readOnly = true;
+        glasgowInput.style.backgroundColor = '#f0f4f8';
+
+        totalEl.textContent = total;
+        detalheEl.textContent = '(O' + o + ' + V' + v + ' + M' + m + ') − P' + p + ' = ' + total + ' (bruto ' + bruto + ')';
+    } else {
+        glasgowInput.readOnly = false;
+        glasgowInput.style.backgroundColor = '#fff';
+
+        if (!ocular && !verbal && !motora && !pupilar) {
+            totalEl.textContent = '—';
+            detalheEl.textContent = '';
+        } else {
+            let somaParcial = 0;
+            let gruposPreenchidos = 0;
+            if (ocular) { somaParcial += parseInt(ocular.value, 10); gruposPreenchidos++; }
+            if (verbal) { somaParcial += parseInt(verbal.value, 10); gruposPreenchidos++; }
+            if (motora) { somaParcial += parseInt(motora.value, 10); gruposPreenchidos++; }
+            totalEl.textContent = 'parcial ' + somaParcial + '/15';
+            detalheEl.textContent = '(' + gruposPreenchidos + '/4 categorias preenchidas)';
+        }
+    }
+}
+
+function resetECG(id) {
+    document.querySelectorAll(
+        'input[name="ecg_ocular_' + id + '"], input[name="ecg_verbal_' + id + '"], input[name="ecg_motora_' + id + '"], input[name="ecg_pupilar_' + id + '"]'
+    ).forEach(function(radio) {
+        radio.checked = false;
+    });
+
+    let glasgowInput = document.getElementById('glasgow_' + id);
+    glasgowInput.value = '';
+    glasgowInput.readOnly = false;
+    glasgowInput.style.backgroundColor = '#fff';
+
+    document.getElementById('ecg_total_valor_' + id).textContent = '—';
+    document.getElementById('ecg_detalhe_' + id).textContent = '';
+}
+
+// ==========================================
+// PROCEDIMENTOS
+// ==========================================
+function toggleOutrosProc(id) {
+    let divOutro = document.getElementById('div_outro_procedimento_' + id);
+    if (document.getElementById('proc_outro_' + id).checked) {
+        divOutro.classList.remove('hidden');
+        document.getElementById('proc_nenhum_' + id).checked = false;
+    } else {
+        divOutro.classList.add('hidden');
+    }
+}
+
+function checkNenhum(id) {
+    if (document.getElementById('proc_nenhum_' + id).checked) {
+        document.getElementById('proc_padrao_' + id).checked = false;
+        document.getElementById('proc_imob_' + id).checked = false;
+        document.getElementById('proc_oxig_' + id).checked = false;
+        document.getElementById('proc_inter_' + id).checked = false;
+        document.getElementById('proc_outro_' + id).checked = false;
+        document.getElementById('div_outro_procedimento_' + id).classList.add('hidden');
+    }
+}
+
+function checkPadrao(id) {
+    if (document.getElementById('proc_padrao_' + id).checked ||
+        document.getElementById('proc_imob_' + id).checked ||
+        document.getElementById('proc_oxig_' + id).checked ||
+        document.getElementById('proc_inter_' + id).checked) {
+        document.getElementById('proc_nenhum_' + id).checked = false;
+    }
+}
+
+// ==========================================
+// APOIO / VEÍCULOS
+// ==========================================
+let contadorVeiculos = 1;
+let contadorApoio = 1;
+
+function addApoio() {
+    contadorApoio++;
+    let container = document.getElementById('container_apoio');
+    let idUnico = 'bloco_apoio_' + contadorApoio;
+    let novoBloco = document.createElement('div');
+    novoBloco.className = 'apoio-bloco';
+    novoBloco.id = idUnico;
+    novoBloco.innerHTML = `
+        <div class="numero-bloco">Apoio ${contadorApoio}</div>
+        <div class="grid-2">
+            <div class="form-group">
+                <label>Comandante:</label>
+                <input type="text" class="txt-apoio-cmd" placeholder="Ex: Sgt Souza">
+            </div>
+            <div class="form-group">
+                <label>Viatura:</label>
+                <input type="text" class="txt-apoio-viatura" placeholder="Ex: M-67890">
+            </div>
+        </div>
+        <button type="button" class="btn-danger" onclick="removerApoio('${idUnico}')">🗑️ Remover Apoio</button>
+    `;
+    container.appendChild(novoBloco);
+}
+
+function removerApoio(idBloco) {
+    if (confirm("Tem certeza que deseja excluir esta viatura de apoio?")) {
+        let bloco = document.getElementById(idBloco);
+        if (bloco) bloco.remove();
+    }
+}
+
+function addVeiculo() {
+    contadorVeiculos++;
+    let container = document.getElementById('container_veiculos');
+    let idUnico = 'bloco_veiculo_' + contadorVeiculos;
+    let novoBloco = document.createElement('div');
+    novoBloco.className = 'veiculo-bloco';
+    novoBloco.id = idUnico;
+    novoBloco.innerHTML = `
+        <div class="numero-bloco">Veículo ${contadorVeiculos}</div>
+        <div class="grid-2">
+            <div class="form-group">
+                <label>Veículo:</label>
+                <input type="text" class="txt-veiculo" placeholder="Ex: Moto Vermelha">
+            </div>
+            <div class="form-group">
+                <label>Placa:</label>
+                <input type="text" class="txt-placa" placeholder="Ex: XYZ-9876">
+            </div>
+        </div>
+        <button type="button" class="btn-danger" onclick="removerVeiculo('${idUnico}')">🗑️ Remover Veículo</button>
+    `;
+    container.appendChild(novoBloco);
+}
+
+function removerVeiculo(idBloco) {
+    if (confirm("Tem certeza que deseja excluir este veículo?")) {
+        let bloco = document.getElementById(idBloco);
+        if (bloco) bloco.remove();
+    }
+}
+
+// ==========================================
+// GERAÇÃO DO RELATÓRIO
+// ==========================================
+function gerarTexto() {
+    let cabecalho = "Bravo: " + document.getElementById('bravo').value +
+                    "\nEndereço: " + document.getElementById('endereco').value;
+
+    if (document.getElementById('check_pm').checked) {
+        let txtCmd = document.getElementsByClassName('txt-apoio-cmd');
+        let txtVtr = document.getElementsByClassName('txt-apoio-viatura');
+        let temApoio = false;
+        for (let i = 0; i < txtCmd.length; i++) {
+            let cmd = txtCmd[i].value.trim();
+            let vtr = txtVtr[i].value.trim();
+            if (cmd || vtr) {
+                cabecalho += "\nViatura de Apoio " + (i + 1) + " - Comandante: " + cmd + " | Viatura: " + vtr;
+                temApoio = true;
+            }
+        }
+        if (!temApoio) cabecalho += "\nViatura de Apoio: (não informado)";
+    }
+
+    if (document.getElementById('check_acidente').checked) {
+        cabecalho += "\nAcidente de Trânsito:";
+        let txtVeiculos = document.getElementsByClassName('txt-veiculo');
+        let txtPlacas = document.getElementsByClassName('txt-placa');
+        for (let i = 0; i < txtVeiculos.length; i++) {
+            cabecalho += "\n  - Veículo " + (i + 1) + ": " + txtVeiculos[i].value + " | Placa: " + txtPlacas[i].value;
+        }
+    }
+
+    const blocos = [];
+    const todasVitimas = document.querySelectorAll('.vitima-accordion');
+
+    todasVitimas.forEach(function(acc, index) {
+        const id = acc.id.replace('acc_', '');
+        const num = index + 1;
+
+        let refeicaoMarcada = document.querySelector('input[name="refeicao_' + id + '"]:checked');
+        let refeicaoTexto = refeicaoMarcada ? refeicaoMarcada.value : "";
+
+        let satVal = document.getElementById('sat_' + id).value;
+        let satTexto = satVal ? satVal + '% a.a' : '';
+        let fcVal = document.getElementById('fc_' + id).value;
+        let fcTexto = fcVal ? fcVal + ' bpm' : '';
+        let frVal = document.getElementById('fr_' + id).value;
+        let frTexto = frVal ? frVal + ' mrpm' : '';
+
+        let procs = [];
+        if (document.getElementById('proc_nenhum_' + id).checked) procs.push("sem intervenção");
+        if (document.getElementById('proc_padrao_' + id).checked) procs.push("abordagem, exame primário e secundário, avaliação e monitoramento dos sinais vitais e transporte");
+        if (document.getElementById('proc_imob_' + id).checked) procs.push("imobilização, contenção");
+        if (document.getElementById('proc_oxig_' + id).checked) procs.push("oxigênio terapia");
+        if (document.getElementById('proc_inter_' + id).checked) procs.push("transporte interhospitalar");
+        if (document.getElementById('proc_outro_' + id).checked) {
+            let textoOutro = document.getElementById('outro_procedimento_texto_' + id).value;
+            if (textoOutro.trim() !== "") procs.push(textoOutro.trim());
+        }
+        let procedimentoFinal = procs.join(", ");
+
+        let bloco = "👤 VÍTIMA " + num + "\n" +
+            "Paciente: " + document.getElementById('paciente_' + id).value +
+            "\nIdade: " + document.getElementById('idade_' + id).value +
+            "\nDN: " + document.getElementById('dn_' + id).value +
+            "\nCPF: " + document.getElementById('cpf_' + id).value +
+            "\nMãe: " + document.getElementById('mae_' + id).value +
+            "\n\nSituação: " + document.getElementById('situacao_' + id).value +
+            "\n\nProcedimento realizado: " + procedimentoFinal +
+            "\n\nPA: " + document.getElementById('pa_' + id).value +
+            "\nSAT: " + satTexto +
+            "\nFC: " + fcTexto +
+            "\nFR: " + frTexto +
+            "\nPupilas: " + document.getElementById('pupilas_' + id).value +
+            "\nPele: " + document.getElementById('pele_' + id).value +
+            "\nÚltima refeição: " + refeicaoTexto +
+            "\nAlergia: " + document.getElementById('alergia_' + id).value +
+            "\nMedicamentos: " + document.getElementById('medicamentos_' + id).value +
+            "\nGlasgow: " + document.getElementById('glasgow_' + id).value +
+            "\n\nRegulado para: " + document.getElementById('regulado_' + id).value +
+            "\nDr: " + document.getElementById('dr_' + id).value +
+            "\nSenha: " + document.getElementById('senha_' + id).value +
+            "\n\nVitima admitida aos cuidados do " + document.getElementById('cuidados_' + id).value;
+
+        blocos.push(bloco);
+    });
+
+    let texto = cabecalho + "\n\n" + blocos.join("\n\n────────────────────────────\n\n");
+
+    let outputDiv = document.getElementById('output');
+    outputDiv.textContent = texto;
+
+    document.getElementById('resultado_secao').scrollIntoView({ behavior: 'smooth' });
+}
+
+// ==========================================
+// COPIAR TEXTO
+// ==========================================
+function copiarTexto() {
+    let outputDiv = document.getElementById("output");
+    let texto = outputDiv.textContent;
+
+    if (!texto || outputDiv.querySelector('.output-placeholder')) return;
+
+    if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(texto).then(function() {
+            mostrarToast();
+        }).catch(function() {
+            fallbackCopiar(texto);
+        });
+    } else {
+        fallbackCopiar(texto);
+    }
+}
+
+function fallbackCopiar(texto) {
+    let tempInput = document.createElement('textarea');
+    tempInput.value = texto;
+    tempInput.style.position = 'fixed';
+    tempInput.style.left = '-9999px';
+    tempInput.style.top = '0';
+    tempInput.style.opacity = '0';
+    document.body.appendChild(tempInput);
+    tempInput.focus();
+    tempInput.select();
+
+    let sucesso = false;
+    try {
+        sucesso = document.execCommand('copy');
+    } catch (err) {
+        sucesso = false;
+    }
+    document.body.removeChild(tempInput);
+
+    if (sucesso) {
+        mostrarToast();
+    } else {
+        let range = document.createRange();
+        range.selectNodeContents(document.getElementById('output'));
+        let sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+        alert('Não foi possível copiar automaticamente. O texto foi selecionado — segure e escolha "Copiar" no menu do celular.');
+    }
+}
+
+function mostrarToast() {
+    let toast = document.getElementById("toast");
+    toast.style.display = "block";
+    setTimeout(function() {
+        toast.style.display = "none";
+    }, 2500);
+}
+
+// ==========================================
+// FONTE DO RELATÓRIO
+// ==========================================
+let tamanhoFonte = 15;
+const TAMANHO_MIN = 10;
+const TAMANHO_MAX = 28;
+
+function ajustarFonte(direcao) {
+    tamanhoFonte += direcao;
+    if (tamanhoFonte < TAMANHO_MIN) tamanhoFonte = TAMANHO_MIN;
+    if (tamanhoFonte > TAMANHO_MAX) tamanhoFonte = TAMANHO_MAX;
+
+    let output = document.getElementById('output');
+    output.style.fontSize = tamanhoFonte + 'px';
+    document.getElementById('font_size_label').textContent = tamanhoFonte + 'px';
+}
+
+// ==========================================
+// INICIALIZAÇÃO
+// ==========================================
+window.addEventListener('load', function() {
+    adicionarVitima();
+});
+</script>
+
+</body>
+</html>
