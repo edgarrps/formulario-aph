@@ -124,6 +124,33 @@
             color: white;
             border-color: #007bff;
         }
+
+        /* ===== NOVO: MENU DE SEXO ===== */
+        .sexo-options {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-top: 4px;
+        }
+        .sexo-options input[type="radio"] {
+            display: none;
+        }
+        .sexo-options label {
+            background: #edf2f7;
+            padding: 10px;
+            text-align: center;
+            border-radius: 8px;
+            cursor: pointer;
+            border: 1px solid #cbd5e0;
+            font-weight: 500;
+            font-size: 14px;
+        }
+        .sexo-options input[type="radio"]:checked + label {
+            background: #007bff;
+            color: white;
+            border-color: #007bff;
+        }
+
         button {
             width: 100%;
             padding: 15px;
@@ -704,6 +731,16 @@ function adicionarVitima() {
                 <div class="form-group">
                     <label>Mãe:</label>
                     <input type="text" id="mae_${id}">
+                </div>
+
+                <div class="form-group">
+                    <label>Sexo:</label>
+                    <div class="sexo-options">
+                        <input type="radio" id="sexo_m_${id}" name="sexo_${id}" value="Masculino">
+                        <label for="sexo_m_${id}">Masculino</label>
+                        <input type="radio" id="sexo_f_${id}" name="sexo_${id}" value="Feminino">
+                        <label for="sexo_f_${id}">Feminino</label>
+                    </div>
                 </div>
 
                 <div class="section-title">Caso</div>
@@ -1603,7 +1640,7 @@ function limparVitima(id) {
     });
 
     document.querySelectorAll(
-        'input[name="refeicao_' + id + '"], input[name="ecg_ocular_' + id + '"], ' +
+        'input[name="refeicao_' + id + '"], input[name="sexo_' + id + '"], input[name="ecg_ocular_' + id + '"], ' +
         'input[name="ecg_verbal_' + id + '"], input[name="ecg_motora_' + id + '"], ' +
         'input[name="ecg_pupilar_' + id + '"]'
     ).forEach(function(r) { r.checked = false; });
@@ -1942,6 +1979,9 @@ function gerarTexto() {
         let refeicaoMarcada = document.querySelector('input[name="refeicao_' + id + '"]:checked');
         let refeicaoTexto = refeicaoMarcada ? refeicaoMarcada.value : "";
 
+        let sexoMarcado = document.querySelector('input[name="sexo_' + id + '"]:checked');
+        let sexoTexto = sexoMarcado ? sexoMarcado.value : "";
+
         let satVal = document.getElementById('sat_' + id).value;
         let satTexto = satVal ? satVal + '% a.a' : '';
         let fcVal = document.getElementById('fc_' + id).value;
@@ -1963,6 +2003,7 @@ function gerarTexto() {
 
         let bloco = "👤 VÍTIMA " + num + "\n" +
             "Paciente: " + document.getElementById('paciente_' + id).value +
+            "\nSexo: " + sexoTexto +
             "\nIdade: " + document.getElementById('idade_' + id).value +
             "\nDN: " + document.getElementById('dn_' + id).value +
             "\nCPF: " + document.getElementById('cpf_' + id).value +
@@ -1982,7 +2023,7 @@ function gerarTexto() {
             "\n\nRegulado para: " + document.getElementById('regulado_' + id).value +
             "\nDr: " + document.getElementById('dr_' + id).value +
             "\nSenha: " + document.getElementById('senha_' + id).value +
-            "\n\nVitima admitida aos cuidados do " + document.getElementById('cuidados_' + id).value;
+            "\n\nVitima admitida aos cuidados do(a) " + document.getElementById('cuidados_' + id).value;
 
         blocos.push(bloco);
     });
